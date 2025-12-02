@@ -30,7 +30,8 @@ public class AdminController {
      * @return 登录结果
      */
     @PostMapping("/login")
-    public Result<Void> login(@RequestBody Map<String, String> loginInfo, HttpSession session,
+//    public Result<Void> login(@RequestBody Map<String, String> loginInfo, HttpSession session,
+    public Result<User> login(@RequestBody Map<String, String> loginInfo, HttpSession session,
             HttpServletResponse response) {
         String username = loginInfo.get("username");
         String password = loginInfo.get("password");
@@ -51,7 +52,8 @@ public class AdminController {
                     ", 学生ID: " + user.getStudentId() +
                     ", session ID: " + session.getId());
 
-            return Result.success("登录成功");
+//            return Result.success("登录成功");
+            return Result.success(user);
         }
 
         System.out.println("用户登录失败: " + username + ", 原因: " + result.getMessage());

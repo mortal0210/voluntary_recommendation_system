@@ -45,11 +45,14 @@ public interface VolunteerRelationMapper {
      * ]
      */
     @Select("call get_student_volunteers(#{studentId})")
-    public List<VolunteerInfoDTO> getStudentVolunteers(@Param("studentId") String studentId);
+    List<VolunteerInfoDTO> getStudentVolunteers(@Param("studentId") String studentId);
 
-
-
-
-
-
+    /**
+     * 统计学生已填报志愿数量
+     *
+     * @param studentId 学生ID
+     * @return 志愿数量
+     */
+    @Select("SELECT COUNT(*) FROM volunteer_relation WHERE student_id = #{studentId}")
+    int countByStudentId(@Param("studentId") String studentId);
 }

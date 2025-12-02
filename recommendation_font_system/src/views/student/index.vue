@@ -176,9 +176,12 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Edit, Delete } from '@element-plus/icons-vue'
 import { getStudentPage, getStudent, saveOrUpdateStudent, deleteStudents, getProvinceList } from '@/api/student'
+
+const router = useRouter()
 
 // 页面加载状态
 const loading = ref(false)
@@ -273,6 +276,13 @@ const queryForm = ref()
 
 // 页面初始加载
 onMounted(() => {
+  // 检查用户权限：只有管理员可以访问学生管理页面
+  const userRole = localStorage.getItem('userRole') || ''
+  if (userRole !== 'admin') {
+    ElMessage.warning('您没有权限访问该页面')
+    router.push('/home')
+    return
+  }
   getList()
   loadProvinceOptions()
 })

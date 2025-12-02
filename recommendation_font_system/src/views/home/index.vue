@@ -1,7 +1,7 @@
 <template>
   <div class="home-container">
     <div class="welcome-section">
-      <h2 class="page-title">高考志愿填报系统</h2>
+      <h2 class="page-title">高考志愿智能推荐系统</h2>
       <div class="steps-section">
         <p class="steps-title">同学们登录系统后控制以下步骤进行操作</p>
         <div class="steps">

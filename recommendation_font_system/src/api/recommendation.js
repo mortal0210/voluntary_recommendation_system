@@ -76,3 +76,21 @@ export function getDisciplineCategories() {
     method: 'get'
   })
 } 
+
+// 获取智能推荐学生概要信息
+export function getRecommendationStudentInfo(studentId) {
+  return request({
+    url: '/api/recommendation/student/info',
+    method: 'get',
+    params: { studentId }
+  })
+}
+
+// 获取推荐志愿详情
+export function getVolunteerDetail(params) {
+  return request({
+    url: '/api/recommendation/volunteer/detail',
+    method: 'get',
+    params
+  })
+}

@@ -71,8 +71,8 @@
 
     <!-- 新增用户 -->
     <insert id="insertUser" parameterType="com.itcao.volunteer_back_system.pojo.User" useGeneratedKeys="true" keyProperty="userId">
-        INSERT INTO system_user(username, password, role, student_id) 
-        VALUES(#{username}, #{password}, #{role}, #{studentId})
+        INSERT INTO system_user(username, password, role, student_id,status)
+        VALUES(#{username}, #{password}, #{role}, #{studentId},#{status})
     </insert>
 
     <!-- 更新用户 -->

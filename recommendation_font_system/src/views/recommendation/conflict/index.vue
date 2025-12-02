@@ -23,28 +23,52 @@
       </el-form>
     </div>
     
-    <div v-if="studentInfo.exists" class="student-info">
-      <el-alert
-        title="学生志愿信息"
-        type="info"
-        :closable="false">
-        <template #default>
-          <div class="student-stats">
-            <div class="stat-item">
-              <span class="stat-label">学生ID:</span>
-              <span class="stat-value">{{ queryParams.studentId }}</span>
+    <div v-if="studentInfo" class="student-info">
+      <el-card shadow="never">
+        <template #header>
+          <div class="info-header">
+            <div class="info-title">
+              <el-icon><User /></el-icon>
+              <span>学生志愿信息</span>
             </div>
-            <div class="stat-item">
-              <span class="stat-label">志愿数量:</span>
-              <span class="stat-value">{{ studentInfo.volunteerCount }}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">匹配的历史录取数据:</span>
-              <span class="stat-value">{{ studentInfo.admissionCount }}</span>
-            </div>
+            <el-tag>{{ studentInfo.studentName || '未填写姓名' }}</el-tag>
           </div>
         </template>
-      </el-alert>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <div class="info-item">
+              <span class="label">学生编号</span>
+              <span class="value">{{ studentInfo.studentId }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">高考分数</span>
+              <span class="value score">{{ studentInfo.examScore ?? '-' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">省市排名</span>
+              <span class="value">{{ studentInfo.provinceRank ?? '-' }}</span>
+            </div>
+          </el-col>
+          <el-col :span="12">
+            <div class="info-item">
+              <span class="label">志愿数量</span>
+              <span class="value">{{ studentInfo.volunteerCount ?? 0 }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">匹配历史数据</span>
+              <span class="value">{{ studentInfo.admissionMatchCount ?? 0 }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">冲突检测结果</span>
+              <span class="value">
+                <el-tag :type="conflictData.length ? 'danger' : 'success'">
+                  {{ conflictData.length ? `发现 ${conflictData.length} 处问题` : '暂未发现问题' }}
+                </el-tag>
+              </span>
+            </div>
+          </el-col>
+        </el-row>
+      </el-card>
     </div>
     
     <!-- 志愿信息表格 -->
@@ -137,9 +161,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
-import { checkVolunteerConflict } from '@/api/recommendation'
+import { User } from '@element-plus/icons-vue'
+import { checkVolunteerConflict, getRecommendationStudentInfo } from '@/api/recommendation'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -153,11 +178,24 @@ const queryParams = reactive({
 const volunteerData = ref([])
 const conflictData = ref([])
 const loading = ref(false)
-const studentInfo = reactive({
-  exists: false,
-  volunteerCount: 0,
-  admissionCount: 0
-})
+const studentInfo = ref(null)
+
+// 获取学生概要信息（志愿数量、匹配记录等）
+const fetchStudentStats = async () => {
+  try {
+    const res = await getRecommendationStudentInfo(queryParams.studentId)
+    if (res.code === 200 && res.data) {
+      studentInfo.value = res.data
+    } else {
+      studentInfo.value = null
+      ElMessage.warning(res.message || '未获取到学生志愿信息')
+    }
+  } catch (error) {
+    studentInfo.value = null
+    console.error('获取学生志愿信息失败', error)
+    ElMessage.error('获取学生志愿信息失败，请检查网络或服务器状态')
+  }
+}
 
 // 弹窗相关
 const dialogVisible = ref(false)
@@ -173,6 +211,7 @@ const handleQuery = async () => {
   
   loading.value = true
   try {
+    await fetchStudentStats()
     // 模拟API调用，使用测试数据
     // const res = await checkVolunteerConflict(queryParams.studentId)
     
@@ -239,9 +278,10 @@ const handleQuery = async () => {
     
     if (res.code === 200) {
       // 设置学生信息
-      studentInfo.exists = res.data.student_exists > 0
-      studentInfo.volunteerCount = res.data.volunteer_count
-      studentInfo.admissionCount = res.data.admission_count
+      if (studentInfo.value) {
+        studentInfo.value.volunteerCount = res.data.volunteer_count ?? studentInfo.value.volunteerCount
+        studentInfo.value.admissionMatchCount = res.data.admission_count ?? studentInfo.value.admissionMatchCount
+      }
       
       // 设置志愿数据
       volunteerData.value = res.data.volunteers || []
@@ -273,9 +313,7 @@ const handleQuery = async () => {
 const resetData = () => {
   volunteerData.value = []
   conflictData.value = []
-  studentInfo.exists = false
-  studentInfo.volunteerCount = 0
-  studentInfo.admissionCount = 0
+  studentInfo.value = null
 }
 
 // 获取标签类型
@@ -386,20 +424,39 @@ const goToVolunteerEdit = () => {
   margin-bottom: 20px;
 }
 
-.student-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.stat-item {
+.info-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 
-.stat-label {
-  font-weight: bold;
-  margin-right: 5px;
+.info-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 14px;
+  color: #606266;
+}
+
+.info-item .label {
+  color: #909399;
+}
+
+.info-item .value {
+  font-weight: 600;
+  color: #303133;
+}
+
+.info-item .score {
+  color: #409eff;
 }
 
 .table-section {

@@ -3,7 +3,7 @@
     <!-- 左侧导航栏 -->
     <div class="sidebar-container">
       <div class="logo-container">
-        <h1 class="logo-title">高考志愿填报辅助系统</h1>
+        <h1 class="logo-title">高考志愿智能推荐系统</h1>
       </div>
       <el-menu 
         :default-active="activeMenu"
@@ -17,11 +17,11 @@
           <el-icon><HomeFilled /></el-icon>
           <template #title>首页</template>
         </el-menu-item>
-        <el-menu-item index="/system">
+        <el-menu-item index="/system" v-if="isAdmin">
           <el-icon><User /></el-icon>
           <template #title>用户管理</template>
         </el-menu-item>
-        <el-menu-item index="/student">
+        <el-menu-item index="/student" v-if="isAdmin">
           <el-icon><UserFilled /></el-icon>
           <template #title>学生管理</template>
         </el-menu-item>
@@ -170,6 +170,12 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 const router = useRouter()
 const route = useRoute()
 
+// 判断是否为管理员（使用computed实时获取localStorage中的角色）
+const isAdmin = computed(() => {
+  const role = localStorage.getItem('userRole') || ''
+  return role === 'admin'
+})
+
 // 错误处理
 onErrorCaptured((err, instance, info) => {
   console.error('组件错误:', err)
@@ -199,6 +205,7 @@ const currentPageTitle = computed(() => {
       '/home': '首页',
       '/system': '用户管理',
       '/student': '学生管理',
+      '/user-center': '个人中心',
       '/school/query': '院校管理',
       '/school/major': '院校管理',
       '/application/apply': '填报管理',

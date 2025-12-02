@@ -159,9 +159,12 @@
 
 <script setup>
 import { ref, reactive, onMounted, nextTick, defineComponent, h } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Edit, Delete } from '@element-plus/icons-vue'
-import { getUserPage, getUser, updateUser, deleteUsers, updateUserStatus } from '@/api/user'
+import { getUserPage, getUser, updateUser, deleteUsers, updateUserStatus, addUser } from '@/api/user'
+
+const router = useRouter()
 
 // 字典标签组件
 const DictTag = defineComponent({
@@ -250,6 +253,13 @@ const queryForm = ref()
 
 // 页面初始加载
 onMounted(() => {
+  // 检查用户权限：只有管理员可以访问用户管理页面
+  const userRole = localStorage.getItem('userRole') || ''
+  if (userRole !== 'admin') {
+    ElMessage.warning('您没有权限访问该页面')
+    router.push('/home')
+    return
+  }
   getList()
 })
 
@@ -413,7 +423,11 @@ const handleBatchDelete = () => {
 const submitForm = () => {
   userFormRef.value?.validate(valid => {
     if (valid) {
-      updateUser(form).then(res => {
+      // 判断是新增还是编辑：如果userId不存在，则是新增用户
+      const isAdd = !form.userId
+      const apiMethod = isAdd ? addUser : updateUser
+      
+      apiMethod(form).then(res => {
         if (res.code === 200) {
           ElMessage.success('操作成功')
           dialog.visible = false

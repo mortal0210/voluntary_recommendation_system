@@ -36,19 +36,19 @@
           <div class="student-info">
             <div class="info-item">
               <span class="label">学生姓名：</span>
-              <span class="value">{{ analysisData.student_name }}</span>
+              <span class="value">{{ displayStudentName }}</span>
             </div>
             <div class="info-item">
               <span class="label">高考分数：</span>
-              <span class="value score">{{ analysisData.score }}</span>
+              <span class="value score">{{ displayStudentScore }}</span>
             </div>
             <div class="info-item">
               <span class="label">省市排名：</span>
-              <span class="value">{{ analysisData.rank }}</span>
+              <span class="value">{{ displayStudentRank }}</span>
             </div>
             <div class="info-item">
               <span class="label">志愿数量：</span>
-              <span class="value">{{ analysisData.volunteer_count }}</span>
+              <span class="value">{{ displayVolunteerCount }}</span>
             </div>
           </div>
           
@@ -253,9 +253,9 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { analyzeVolunteerComprehensive } from '@/api/recommendation'
+import { analyzeVolunteerComprehensive, getRecommendationStudentInfo } from '@/api/recommendation'
 
 // 查询参数
 const queryParams = reactive({
@@ -265,6 +265,34 @@ const queryParams = reactive({
 // 分析结果
 const analysisData = ref(null)
 const loading = ref(false)
+const studentSummary = ref(null)
+
+// 个人概要展示
+const displayStudentName = computed(() => studentSummary.value?.studentName || analysisData.value?.student_name || '-')
+const displayStudentScore = computed(() => studentSummary.value?.examScore ?? analysisData.value?.score ?? '-')
+const displayStudentRank = computed(() => studentSummary.value?.provinceRank ?? analysisData.value?.rank ?? '-')
+const displayVolunteerCount = computed(() => studentSummary.value?.volunteerCount ?? analysisData.value?.volunteer_count ?? '-')
+
+const fetchStudentSummary = async () => {
+  try {
+    const res = await getRecommendationStudentInfo(queryParams.studentId)
+    if (res.code === 200 && res.data) {
+      studentSummary.value = {
+        studentName: res.data.studentName,
+        examScore: res.data.examScore,
+        provinceRank: res.data.provinceRank,
+        volunteerCount: res.data.volunteerCount
+      }
+    } else {
+      studentSummary.value = null
+      ElMessage.warning(res.message || '未获取到学生概要信息')
+    }
+  } catch (error) {
+    studentSummary.value = null
+    console.error('获取学生概要信息失败', error)
+    ElMessage.error('获取学生概要信息失败，请检查网络或服务器状态')
+  }
+}
 
 // 查询数据
 const handleQuery = async () => {
@@ -275,6 +303,7 @@ const handleQuery = async () => {
   
   loading.value = true
   try {
+    await fetchStudentSummary()
     // 模拟API调用，使用测试数据
     // const res = await analyzeVolunteerComprehensive(queryParams.studentId)
     
@@ -313,15 +342,6 @@ const handleQuery = async () => {
           },
           {
             order: 2,
-            university_name: '清华大学',
-            major_name: '软件工程',
-            last_year_score: 685,
-            score_difference: -34.5,
-            admission_probability: 30,
-            risk_level: '高风险'
-          },
-          {
-            order: 3,
             university_name: '浙江大学',
             major_name: '人工智能',
             last_year_score: 660,
@@ -330,25 +350,7 @@ const handleQuery = async () => {
             risk_level: '中风险'
           },
           {
-            order: 4,
-            university_name: '复旦大学',
-            major_name: '数据科学与大数据技术',
-            last_year_score: 655,
-            score_difference: -4.5,
-            admission_probability: 70,
-            risk_level: '中风险'
-          },
-          {
-            order: 5,
-            university_name: '上海交通大学',
-            major_name: '信息安全',
-            last_year_score: 650,
-            score_difference: 0.5,
-            admission_probability: 75,
-            risk_level: '中风险'
-          },
-          {
-            order: 6,
+            order: 3,
             university_name: '南京大学',
             major_name: '软件工程',
             last_year_score: 645,

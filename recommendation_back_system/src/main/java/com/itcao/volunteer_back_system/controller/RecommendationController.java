@@ -1,5 +1,7 @@
 package com.itcao.volunteer_back_system.controller;
 
+import com.itcao.volunteer_back_system.Dto.RecommendationStudentInfoDTO;
+import com.itcao.volunteer_back_system.Dto.RecommendationVolunteerDetailDTO;
 import com.itcao.volunteer_back_system.common.Result;
 import com.itcao.volunteer_back_system.Dto.RecommendationResult;
 import com.itcao.volunteer_back_system.Dto.ConflictResult;
@@ -20,6 +22,33 @@ public class RecommendationController {
 
     @Autowired
     private RecommendationService recommendationService;
+
+    /**
+     * 获取学生推荐概要信息
+     *
+     * @param studentId 学生ID
+     * @return 学生概要
+     */
+    @GetMapping("/student/info")
+    public Result<RecommendationStudentInfoDTO> getRecommendationStudentInfo(@RequestParam String studentId) {
+        return recommendationService.getRecommendationStudentInfo(studentId);
+    }
+
+    /**
+     * 推荐详情（单个院校专业）
+     *
+     * @param studentId    学生ID
+     * @param universityId 院校ID
+     * @param majorId      专业ID
+     * @return 推荐详情
+     */
+    @GetMapping("/volunteer/detail")
+    public Result<RecommendationVolunteerDetailDTO> getRecommendationVolunteerDetail(
+            @RequestParam String studentId,
+            @RequestParam String universityId,
+            @RequestParam String majorId) {
+        return recommendationService.getRecommendationVolunteerDetail(studentId, universityId, majorId);
+    }
 
     /**
      * 智能志愿推荐

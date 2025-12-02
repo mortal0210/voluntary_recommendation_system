@@ -83,4 +83,13 @@ export function updateUserStatus(data) {
     method: 'post',
     data
   })
+}
+
+// 添加用户
+export function addUser(data) {
+  return request({
+    url: '/user/addUser',
+    method: 'post',
+    data
+  })
 } 

@@ -12,7 +12,9 @@ public class RecommendationItem implements Serializable {
     private String majorName; // 专业名称
     private String majorId; // 专业ID
     private Integer lastYearAdmission; // 去年录取分数
-    private Integer scoreDifference; // 分数差距
+    private Integer scoreDifference; // 分数差距（学生分-录取分）
+    private Double admissionProbability; // 录取概率
+    private Double recommendationRate; // 推荐指数（0~5）
 
     public RecommendationItem() {
     }
@@ -73,5 +75,21 @@ public class RecommendationItem implements Serializable {
 
     public void setScoreDifference(Integer scoreDifference) {
         this.scoreDifference = scoreDifference;
+    }
+
+    public Double getAdmissionProbability() {
+        return admissionProbability;
+    }
+
+    public void setAdmissionProbability(Double admissionProbability) {
+        this.admissionProbability = admissionProbability;
+    }
+
+    public Double getRecommendationRate() {
+        return recommendationRate;
+    }
+
+    public void setRecommendationRate(Double recommendationRate) {
+        this.recommendationRate = recommendationRate;
     }
 }

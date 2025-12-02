@@ -45,7 +45,7 @@ import { ref, reactive } from 'vue'
 import { User, Lock } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
-import { login, getUserInfo, getCurrentStudentId } from '@/api/user'
+import { login } from '@/api/user'
 
 // 路由实例
 const router = useRouter()
@@ -90,31 +90,20 @@ const handleLogin = async () => {
               localStorage.setItem('userId', res.data.userId)
             }
             
+            // 保存用户角色（从登录接口返回数据中获取）
+            const userRole = res.data?.role || ''
+            localStorage.setItem('userRole', userRole)
+            
+            // 如果是学生角色，保存学生ID
+            if (userRole === 'student' && res.data?.studentId) {
+              localStorage.setItem('studentId', res.data.studentId)
+            } else {
+              // 如果不是学生角色，清除可能存在的学生ID
+              localStorage.removeItem('studentId')
+            }
+            
             // 设置登录状态
             localStorage.setItem('isLogin', 'true')
-            
-            // 获取用户信息
-            try {
-              const userInfoRes = await getUserInfo()
-              if (userInfoRes.code === 200) {
-                // 保存用户角色
-                const userRole = userInfoRes.data?.role || ''
-                localStorage.setItem('userRole', userRole)
-                
-                // 如果是学生角色，获取学生ID
-                if (userRole === 'student') {
-                  const studentIdRes = await getCurrentStudentId()
-                  if (studentIdRes.code === 200 && studentIdRes.data) {
-                    localStorage.setItem('studentId', studentIdRes.data)
-                  }
-                } else {
-                  // 如果不是学生角色，清除可能存在的学生ID
-                  localStorage.removeItem('studentId')
-                }
-              }
-            } catch (infoError) {
-              console.error('获取用户信息错误', infoError)
-            }
             
             ElMessage.success('登录成功')
             // 登录成功后跳转到首页

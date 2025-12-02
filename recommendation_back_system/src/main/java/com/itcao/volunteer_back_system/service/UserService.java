@@ -1,5 +1,6 @@
 package com.itcao.volunteer_back_system.service;
 
+import com.itcao.volunteer_back_system.Dto.UserProfileDTO;
 import com.itcao.volunteer_back_system.common.PageResult;
 import com.itcao.volunteer_back_system.common.Result;
 import com.itcao.volunteer_back_system.pojo.User;
@@ -78,4 +79,20 @@ public interface UserService {
      * @return 操作结果
      */
     Result<Void> updateStatus(Integer userId, Integer status);
+
+    /**
+     * 新增用户（从独立接口调用）
+     * 
+     * @param user 用户信息
+     * @return 操作结果
+     */
+    Result<Void> addUser(User user);
+
+    /**
+     * 获取个人中心信息
+     *
+     * @param userId 用户ID
+     * @return 个人中心数据
+     */
+    Result<UserProfileDTO> getProfile(Integer userId);
 }

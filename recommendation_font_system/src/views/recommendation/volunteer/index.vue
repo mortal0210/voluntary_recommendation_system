@@ -23,17 +23,44 @@
       </el-form>
     </div>
     
-    <div v-if="studentScore" class="student-info">
-      <el-alert
-        title="学生信息"
-        type="info"
-        :closable="false">
-        <template #default>
-          <div class="student-score">
-            <span>高考分数：<strong>{{ studentScore }}</strong></span>
+    <div v-if="studentInfo" class="student-info">
+      <el-card shadow="never">
+        <template #header>
+          <div class="info-header">
+            <div class="info-title">
+              <el-icon><User /></el-icon>
+              <span>学生信息</span>
+            </div>
+            <el-tag type="primary">{{ studentInfo.studentName || '未填写姓名' }}</el-tag>
           </div>
         </template>
-      </el-alert>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <div class="info-item">
+              <span class="label">学生编号</span>
+              <span class="value">{{ studentInfo.studentId }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">高考分数</span>
+              <span class="value score">{{ studentInfo.examScore ?? '-' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">省市排名</span>
+              <span class="value">{{ studentInfo.provinceRank ?? '-' }}</span>
+            </div>
+          </el-col>
+          <el-col :span="12">
+            <div class="info-item">
+              <span class="label">志愿数量</span>
+              <span class="value">{{ studentInfo.volunteerCount ?? 0 }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">匹配历史数据</span>
+              <span class="value">{{ studentInfo.admissionMatchCount ?? 0 }}</span>
+            </div>
+          </el-col>
+        </el-row>
+      </el-card>
     </div>
     
     <el-table
@@ -84,13 +111,68 @@
     <div class="empty-block" v-if="!loading && tableData.length === 0">
       <el-empty description="暂无推荐数据，请输入学生编号进行查询" />
     </div>
+
+    <el-dialog
+      v-model="detailDialogVisible"
+      title="志愿推荐详情"
+      width="700px"
+      destroy-on-close
+    >
+      <el-skeleton v-if="detailLoading" :rows="6" animated />
+      <template v-else>
+        <el-descriptions column="2" border>
+          <el-descriptions-item label="院校名称">{{ detailData?.universityName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="专业名称">{{ detailData?.majorName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="去年录取分数">{{ detailData?.lastYearScore ?? '-' }}</el-descriptions-item>
+          <el-descriptions-item label="分数差距">{{ formatScoreDifference(detailData?.scoreDifference || 0) }}</el-descriptions-item>
+          <el-descriptions-item label="录取概率">
+            <el-progress
+              v-if="detailData?.admissionProbability !== undefined"
+              :percentage="detailData.admissionProbability"
+              :color="getProbabilityColor(detailData.admissionProbability)"
+              :stroke-width="12"
+              :format="percentageFormat"
+            />
+            <span v-else>-</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="推荐等级">
+            <el-rate v-if="detailData?.recommendationRate"
+              v-model="detailData.recommendationRate"
+              disabled
+              show-score
+              text-color="#ff9900"
+              score-template="{value}"
+            />
+            <span v-else>-</span>
+          </el-descriptions-item>
+        </el-descriptions>
+        <el-divider />
+        <el-descriptions column="1" border>
+          <el-descriptions-item label="优势分析">
+            {{ detailData?.advantageAnalysis || '暂无数据' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="风险提示">
+            {{ detailData?.riskAdvice || detailData?.riskTips || '暂无数据' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="录取建议">
+            {{ detailData?.suggestion || '暂无数据' }}
+          </el-descriptions-item>
+        </el-descriptions>
+      </template>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="detailDialogVisible = false">关闭</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getVolunteerRecommendation } from '@/api/recommendation'
+import { User, LocationInformation, School, Collection } from '@element-plus/icons-vue'
+import { getVolunteerRecommendation, getRecommendationStudentInfo, getVolunteerDetail } from '@/api/recommendation'
 import { saveApplication } from '@/api/application'
 
 // 查询参数
@@ -101,7 +183,27 @@ const queryParams = reactive({
 // 表格数据
 const tableData = ref([])
 const loading = ref(false)
-const studentScore = ref(null)
+const studentInfo = ref(null)
+const detailDialogVisible = ref(false)
+const detailLoading = ref(false)
+const detailData = ref(null)
+
+// 获取学生信息概览
+const fetchStudentInfo = async () => {
+  try {
+    const res = await getRecommendationStudentInfo(queryParams.studentId)
+    if (res.code === 200 && res.data) {
+      studentInfo.value = res.data
+    } else {
+      studentInfo.value = null
+      ElMessage.warning(res.message || '未获取到学生信息')
+    }
+  } catch (error) {
+    studentInfo.value = null
+    console.error('获取学生信息失败', error)
+    ElMessage.error('获取学生信息失败，请检查网络或服务器状态')
+  }
+}
 
 // 查询数据
 const handleQuery = async () => {
@@ -112,82 +214,43 @@ const handleQuery = async () => {
   
   loading.value = true
   try {
-    // 模拟API调用，使用测试数据
-    // const res = await getVolunteerRecommendation(queryParams.studentId)
-    
-    // 使用测试数据
-    const mockData = {
-      code: 200,
-      message: '操作成功',
-      data: {
-        student_score: 650.5,
-        recommendations: [
-          {
-            university_name: '北京大学',
-            major_name: '计算机科学与技术',
-            last_year_admission: 680,
-            score_difference: -29.5
-          },
-          {
-            university_name: '清华大学',
-            major_name: '软件工程',
-            last_year_admission: 685,
-            score_difference: -34.5
-          },
-          {
-            university_name: '浙江大学',
-            major_name: '人工智能',
-            last_year_admission: 660,
-            score_difference: -9.5
-          },
-          {
-            university_name: '复旦大学',
-            major_name: '数据科学与大数据技术',
-            last_year_admission: 655,
-            score_difference: -4.5
-          },
-          {
-            university_name: '上海交通大学',
-            major_name: '信息安全',
-            last_year_admission: 670,
-            score_difference: -19.5
-          },
-          {
-            university_name: '南京大学',
-            major_name: '软件工程',
-            last_year_admission: 645,
-            score_difference: 5.5
-          },
-          {
-            university_name: '武汉大学',
-            major_name: '计算机科学与技术',
-            last_year_admission: 635,
-            score_difference: 15.5
-          }
-        ]
-      }
-    };
-    
-    const res = mockData;
+    await fetchStudentInfo()
+    const res = await getVolunteerRecommendation(queryParams.studentId)
     
     if (res.code === 200) {
-      // 设置学生分数
-      if (res.data.student_score) {
-        studentScore.value = res.data.student_score
-      }
-      
-      // 设置推荐数据
-      tableData.value = res.data.recommendations.map(item => {
-        // 计算推荐指数（1-5分）
-        const scoreDiff = Math.abs(item.score_difference)
-        let recommendationRate = 5
-        if (scoreDiff > 50) recommendationRate = 1
-        else if (scoreDiff > 30) recommendationRate = 2
-        else if (scoreDiff > 20) recommendationRate = 3
-        else if (scoreDiff > 10) recommendationRate = 4
-        
+      const recommendations = res.data?.recommendations || []
+      tableData.value = recommendations.map(item => {
+        const rawDiff = item.scoreDifference ?? item.score_difference ?? 0
+        const scoreDiff = Number(rawDiff)
+
+        const hasRate =
+          item.recommendationRate !== undefined &&
+          item.recommendationRate !== null
+
+        const hasRateSnake =
+          item.recommendation_rate !== undefined &&
+          item.recommendation_rate !== null
+
+        let recommendationRate = hasRate
+          ? Number(item.recommendationRate)
+          : hasRateSnake
+            ? Number(item.recommendation_rate)
+            : undefined
+
+        if (recommendationRate === undefined || Number.isNaN(recommendationRate)) {
+          recommendationRate = 5
+          if (Math.abs(scoreDiff) > 50) recommendationRate = 1
+          else if (Math.abs(scoreDiff) > 30) recommendationRate = 2
+          else if (Math.abs(scoreDiff) > 20) recommendationRate = 3
+          else if (Math.abs(scoreDiff) > 10) recommendationRate = 4
+        }
+
         return {
           ...item,
+          university_name: item.universityName || item.university_name,
+          major_name: item.majorName || item.major_name,
+          last_year_admission: item.lastYearAdmission || item.last_year_admission,
+          score_difference: scoreDiff,
           recommendationRate
         }
       })
@@ -224,22 +287,29 @@ const getScoreDifferenceClass = (diff) => {
 
 // 添加到志愿
 const handleAddToVolunteer = (row) => {
+  if (!queryParams.studentId) {
+    ElMessage.warning('请先输入学生编号并查询')
+    return
+  }
+
   ElMessageBox.confirm(`确认将 ${row.university_name} 的 ${row.major_name} 专业添加到志愿中吗？`, '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'info'
   }).then(() => {
-    // 提取院校代码和专业代码
-    const universityId = row.university_id || extractId(row.university_name)
-    const majorId = row.major_id || extractId(row.major_name)
-    
-    // 保存志愿
-    saveApplication({
+    const universityId = row.universityId || row.university_id || row.universityCode || extractId(row.university_name)
+    const majorId = row.majorId || row.major_id || row.majorCode || extractId(row.major_name)
+    const payload = {
       studentId: queryParams.studentId,
       universityId,
+      universityName: row.university_name,
       majorId,
-      volunteerOrder: 1 // 默认设为第一志愿，用户可以在志愿填报页面修改
-    }).then(res => {
+      majorName: row.major_name,
+      recommendationId: row.recommendationId || row.id,
+      volunteerOrder: row.recommendationOrder || 1
+    }
+    
+    saveApplication(payload).then(res => {
       if (res.code === 200) {
         ElMessage.success('已成功添加到志愿')
       } else {
@@ -260,9 +330,44 @@ const extractId = (name) => {
 
 // 查看详情
 const handleViewDetails = (row) => {
-  // 跳转到专业详情页面或显示详情弹窗
-  ElMessage.info('查看详情功能开发中...')
+  const universityId = row.universityId || row.university_id || row.universityCode
+  const majorId = row.majorId || row.major_id || row.majorCode
+  if (!queryParams.studentId || !universityId || !majorId) {
+    ElMessage.warning('缺少必要的查询参数，无法获取详情')
+    return
+  }
+
+  detailDialogVisible.value = true
+  detailLoading.value = true
+  detailData.value = null
+
+  getVolunteerDetail({
+    studentId: queryParams.studentId,
+    universityId,
+    majorId
+  }).then(res => {
+    if (res.code === 200 && res.data) {
+      detailData.value = res.data
+    } else {
+      ElMessage.error(res.message || '获取志愿详情失败')
+      detailDialogVisible.value = false
+    }
+  }).catch(error => {
+    console.error('获取志愿详情失败', error)
+    ElMessage.error('获取志愿详情失败，请检查网络或服务器状态')
+    detailDialogVisible.value = false
+  }).finally(() => {
+    detailLoading.value = false
+  })
 }
+
+const getProbabilityColor = (probability) => {
+  if (probability < 50) return '#F56C6C'
+  if (probability < 80) return '#E6A23C'
+  return '#67C23A'
+}
+
+const percentageFormat = (percentage) => `${percentage}%`
 </script>
 
 <style scoped>
@@ -300,12 +405,43 @@ const handleViewDetails = (row) => {
   margin-bottom: 20px;
 }
 
-.student-score {
-  font-size: 16px;
+.info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.info-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 14px;
+  color: #606266;
+}
+
+.info-item .label {
+  color: #909399;
+}
+
+.info-item .value {
+  font-weight: 600;
+  color: #303133;
+}
+
+.info-item .score {
+  color: #409eff;
 }
 
 .score-high {
-  color: #f56c6c;
+  color: #67c23a;
   font-weight: bold;
 }
 
@@ -315,7 +451,7 @@ const handleViewDetails = (row) => {
 }
 
 .score-low {
-  color: #67c23a;
+  color: #f56c6c;
   font-weight: bold;
 }
 

@@ -1,5 +1,6 @@
 package com.itcao.volunteer_back_system.controller;
 
+import com.itcao.volunteer_back_system.Dto.UserProfileDTO;
 import com.itcao.volunteer_back_system.common.PageResult;
 import com.itcao.volunteer_back_system.common.Result;
 import com.itcao.volunteer_back_system.pojo.User;
@@ -8,6 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpSession;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -93,6 +98,45 @@ public class UserController {
     @PostMapping("/updateUser")
     public Result<Void> updateUser(@RequestBody User user) {
         return userService.updateUser(user);
+    }
+
+    @PostMapping("/addUser")
+    public Result<Void> addUser(@RequestBody User user) {
+        return userService.addUser(user);
+    }
+
+    /**
+     * 获取当前登录用户的个人中心信息
+     *
+     * @param session HTTP会话
+     * @return 个人中心数据
+     */
+    @GetMapping("/profile")
+    public Result<UserProfileDTO> getProfile(HttpSession session) {
+        User current = (User) session.getAttribute("user");
+        if (current == null) {
+            return Result.error(401, "登录已过期，请重新登录");
+        }
+
+        Result<UserProfileDTO> profileResult = userService.getProfile(current.getUserId());
+        if (profileResult.getCode() != 200) {
+            return profileResult;
+        }
+
+        UserProfileDTO profile = profileResult.getData();
+        if (profile != null) {
+            profile.setLastLoginTime(formatTimestamp(session.getLastAccessedTime()));
+            if (profile.getLastAction() == null) {
+                profile.setLastAction("暂无操作记录");
+            }
+        }
+
+        return Result.success(profile);
+    }
+
+    private String formatTimestamp(long millis) {
+        LocalDateTime dateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneId.systemDefault());
+        return dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 
     /**

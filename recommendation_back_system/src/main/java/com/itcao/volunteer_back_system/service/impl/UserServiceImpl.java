@@ -1,14 +1,16 @@
 package com.itcao.volunteer_back_system.service.impl;
 
+import com.itcao.volunteer_back_system.Dto.UserProfileDTO;
 import com.itcao.volunteer_back_system.common.PageResult;
 import com.itcao.volunteer_back_system.common.Result;
+import com.itcao.volunteer_back_system.mapper.StudentMapper;
 import com.itcao.volunteer_back_system.mapper.UserMapper;
+import com.itcao.volunteer_back_system.pojo.Student;
 import com.itcao.volunteer_back_system.pojo.User;
 import com.itcao.volunteer_back_system.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,6 +23,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private StudentMapper studentMapper;
 
     /**
      * 用户登录
@@ -105,18 +110,31 @@ public class UserServiceImpl implements UserService {
      */
     @Override
     public Result<Void> updateUser(User user) {
-        int result;
-        if (user.getUserId() != null) {
-            // 更新用户
-            if (user.getPassword() != null && !user.getPassword().isEmpty()) {
-                // 如果提供了密码，则更新密码
-                userMapper.updatePassword(user);
-            }
-            result = userMapper.updateUser(user);
-        } else {
-            // 新增用户
-            result = userMapper.insertUser(user);
+        if (user == null) {
+            return Result.error("用户信息不能为空");
         }
+
+        if (user.getUserId() == null) {
+            // 走新增逻辑
+            return addUser(user);
+        }
+
+        // 只有在请求中传递了角色或学生ID时才需要重新校验
+        if (user.getRole() != null || user.getStudentId() != null) {
+            String validationError = validateAndNormalizeStudentBinding(user);
+            if (validationError != null) {
+                return Result.error(validationError);
+            }
+        }
+
+        int result;
+
+        // 更新用户密码
+        if (user.getPassword() != null && !user.getPassword().isEmpty()) {
+            userMapper.updatePassword(user);
+        }
+
+        result = userMapper.updateUser(user);
 
         if (result > 0) {
             return Result.success();
@@ -156,5 +174,108 @@ public class UserServiceImpl implements UserService {
             return Result.success();
         }
         return Result.error("更新状态失败");
+    }
+
+    @Override
+    public Result<Void> addUser(User user) {
+        if (user == null) {
+            return Result.error("用户信息不能为空");
+        }
+
+        String validationError = validateAndNormalizeStudentBinding(user);
+        if (validationError != null) {
+            return Result.error(validationError);
+        }
+
+        if (user.getStatus() == null) {
+            user.setStatus(1);
+        }
+
+        int rows = userMapper.insertUser(user);
+        if (rows > 0) {
+            return Result.success();
+        }
+        return Result.error("新增用户失败");
+    }
+
+    private String validateAndNormalizeStudentBinding(User user) {
+        String role = user.getRole();
+        if (isBlank(role)) {
+            return "用户角色不能为空";
+        }
+
+        if ("student".equalsIgnoreCase(role.trim())) {
+            String studentId = user.getStudentId();
+            if (isBlank(studentId)) {
+                return "学生用户必须绑定学生ID";
+            }
+
+            Student student = studentMapper.getStudentById(studentId.trim());
+            if (student == null) {
+                return "学生ID不存在，请先在学生管理中创建该学生";
+            }
+
+            user.setStudentId(studentId.trim());
+        } else {
+            // 其他角色不绑定学生
+            user.setStudentId(null);
+        }
+
+        return null;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    @Override
+    public Result<UserProfileDTO> getProfile(Integer userId) {
+        if (userId == null) {
+            return Result.error("用户ID不能为空");
+        }
+
+        User user = userMapper.getUserById(userId);
+        if (user == null) {
+            return Result.error("用户不存在");
+        }
+
+        UserProfileDTO profileDTO = new UserProfileDTO();
+        profileDTO.setUserId(user.getUserId());
+        profileDTO.setUsername(user.getUsername());
+        profileDTO.setRole(user.getRole());
+        profileDTO.setRoleLabel(buildRoleLabel(user.getRole()));
+        profileDTO.setStudentId(user.getStudentId());
+        profileDTO.setStatus(user.getStatus());
+        profileDTO.setCreateTime(user.getCreateTime());
+        profileDTO.setLastLoginTime(null);
+        profileDTO.setPhone(null);
+        profileDTO.setLastAction(null);
+        profileDTO.setDepartment(buildDepartment(user.getRole()));
+
+        return Result.success(profileDTO);
+    }
+
+    private String buildRoleLabel(String role) {
+        if (isBlank(role)) {
+            return "未知角色";
+        }
+        switch (role) {
+            case "admin":
+                return "管理员";
+            case "student":
+                return "学生";
+            default:
+                return "普通用户";
+        }
+    }
+
+    private String buildDepartment(String role) {
+        if ("admin".equalsIgnoreCase(role)) {
+            return "招生办";
+        }
+        if ("student".equalsIgnoreCase(role)) {
+            return "考生";
+        }
+        return null;
     }
 }

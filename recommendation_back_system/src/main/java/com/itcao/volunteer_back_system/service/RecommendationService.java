@@ -1,12 +1,13 @@
 package com.itcao.volunteer_back_system.service;
 
+import com.itcao.volunteer_back_system.Dto.RecommendationStudentInfoDTO;
+import com.itcao.volunteer_back_system.Dto.RecommendationVolunteerDetailDTO;
 import com.itcao.volunteer_back_system.common.Result;
 import com.itcao.volunteer_back_system.Dto.RecommendationResult;
 import com.itcao.volunteer_back_system.Dto.ConflictResult;
 import com.itcao.volunteer_back_system.Dto.ComprehensiveAnalysisResult;
 import com.itcao.volunteer_back_system.Dto.UniversityMajorMatchResult;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -80,4 +81,23 @@ public interface RecommendationService {
      * @return 学科门类列表
      */
     Result<Object> getDisciplineCategories();
+
+    /**
+     * 获取智能推荐模块的学生概要信息
+     *
+     * @param studentId 学生ID
+     * @return 学生概要信息
+     */
+    Result<RecommendationStudentInfoDTO> getRecommendationStudentInfo(String studentId);
+
+    /**
+     * 获取推荐志愿详情
+     *
+     * @param studentId    学生ID
+     * @param universityId 院校ID
+     * @param majorId      专业ID
+     * @return 推荐详情
+     */
+    Result<RecommendationVolunteerDetailDTO> getRecommendationVolunteerDetail(String studentId, String universityId,
+            String majorId);
 }

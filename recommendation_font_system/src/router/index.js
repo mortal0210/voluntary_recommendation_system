@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import Layout from '../layout/index.vue'
 
 const router = createRouter({
@@ -137,6 +138,12 @@ const router = createRouter({
           name: 'system',
           component: () => import('../views/system/index.vue'),
           meta: { title: '系统管理', icon: 'Setting' }
+        },
+        {
+          path: '/user-center',
+          name: 'userCenter',
+          component: () => import('../views/profile/index.vue'),
+          meta: { title: '个人中心', icon: 'UserFilled' }
         }
       ]
     }
@@ -147,6 +154,8 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   // 检查token是否存在
   const token = localStorage.getItem('token')
+  // 获取用户角色
+  const userRole = localStorage.getItem('userRole') || ''
   
   try {
     if (to.path === '/login') {
@@ -162,7 +171,16 @@ router.beforeEach((to, from, next) => {
         // 未登录则重定向到登录页
         next({ path: '/login' })
       } else {
-        // 已登录则允许访问
+        // 检查权限：学生角色不能访问用户管理和学生管理页面
+        if (userRole === 'student') {
+          if (to.path === '/system' || to.path === '/student') {
+            // 学生角色尝试访问受限页面，重定向到首页
+            ElMessage.warning('您没有权限访问该页面')
+            next({ path: '/home' })
+            return
+          }
+        }
+        // 已登录且权限检查通过，允许访问
         next()
       }
     }

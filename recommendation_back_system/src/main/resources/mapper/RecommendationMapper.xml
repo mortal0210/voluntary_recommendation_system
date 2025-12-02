@@ -34,19 +34,145 @@
         <result column="advice" property="advice"/>
     </resultMap>
 
-    <!-- 调用智能志愿推荐存储过程 -->
+    <!-- 调用智能志愿推荐存储过程（仅调试用，业务不直接依赖多结果集） -->
     <select id="callFlexibleRecommendation" resultType="java.util.Map" statementType="CALLABLE">
         {CALL flexible_recommendation(#{studentId,mode=IN})}
+    </select>
+
+    <!-- 基于学生成绩的智能志愿推荐（单结果集版本，用于正式业务）
+    <select id="queryFlexibleRecommendations" resultType="java.util.Map">
+        SELECT
+            u.university_id      AS university_id,
+            u.university_name    AS university_name,
+            m.major_id           AS major_id,
+            m.major_name         AS major_name,
+            m.line_score  AS last_year_admission,
+            ROUND(
+                ABS(
+                    IFNULL(s.college_entrance_exam_score, 600) - m.line_score
+                )
+            ) AS score_difference
+        FROM student s
+        JOIN historical_admission ha
+            ON 1 = 1
+        JOIN university u
+            ON u.university_id = ha.university_id
+        JOIN major m
+            ON m.major_id = ha.major_id
+        WHERE s.student_id = #{studentId}
+        ORDER BY score_difference
+        LIMIT 20
+    </select> -->
+
+    
+    <!-- 基于学生成绩的智能志愿推荐（单结果集版本，用于正式业务） -->
+    <select id="queryFlexibleRecommendations" resultType="java.util.Map">
+        SELECT
+            latest_ha.university_id,
+            u.university_name,
+            latest_ha.major_id,
+            m.major_name,
+            COALESCE(uml.line_score, latest_ha.admission_number)             AS last_year_admission,
+            ROUND(IFNULL(s.college_entrance_exam_score, 600) -
+                      COALESCE(uml.line_score, latest_ha.admission_number)) AS score_difference
+        FROM student s
+                 JOIN (
+            SELECT ha.university_id,
+                   ha.major_id,
+                   ha.admission_number
+            FROM historical_admission ha
+                     JOIN (
+                SELECT university_id, major_id, MAX(year) AS latest_year
+                FROM historical_admission
+                GROUP BY university_id, major_id
+            ) latest
+                          ON latest.university_id = ha.university_id
+                          AND latest.major_id = ha.major_id
+                          AND latest.latest_year = ha.year
+        ) latest_ha ON 1 = 1
+                 JOIN university u ON u.university_id = latest_ha.university_id
+                 JOIN major m ON m.major_id = latest_ha.major_id
+                 LEFT JOIN university_major_line uml
+                           ON uml.university_id = latest_ha.university_id
+                               AND uml.major_id = latest_ha.major_id
+                               AND uml.year = YEAR(CURDATE())
+        WHERE s.student_id = #{studentId}
+        ORDER BY score_difference DESC,
+                 ABS(IFNULL(s.college_entrance_exam_score, 600) -
+                     COALESCE(uml.line_score, latest_ha.admission_number))
+        LIMIT 20
+    </select>
+
+    <!-- 获取详情时使用，与列表保持一致 -->
+    <select id="selectRecommendationDetail" resultType="java.util.Map">
+        SELECT
+            latest_ha.university_id,
+            u.university_name,
+            latest_ha.major_id,
+            m.major_name,
+            COALESCE(uml.line_score, latest_ha.admission_number)             AS last_year_admission,
+            ROUND(IFNULL(s.college_entrance_exam_score, 600) -
+                      COALESCE(uml.line_score, latest_ha.admission_number)) AS score_difference
+        FROM student s
+                 JOIN (
+            SELECT ha.university_id,
+                   ha.major_id,
+                   ha.admission_number
+            FROM historical_admission ha
+                     JOIN (
+                SELECT university_id, major_id, MAX(year) AS latest_year
+                FROM historical_admission
+                GROUP BY university_id, major_id
+            ) latest
+                          ON latest.university_id = ha.university_id
+                          AND latest.major_id = ha.major_id
+                          AND latest.latest_year = ha.year
+        ) latest_ha ON 1 = 1
+                 JOIN university u ON u.university_id = latest_ha.university_id
+                 JOIN major m ON m.major_id = latest_ha.major_id
+                 LEFT JOIN university_major_line uml
+                           ON uml.university_id = latest_ha.university_id
+                               AND uml.major_id = latest_ha.major_id
+                               AND uml.year = YEAR(CURDATE())
+        WHERE s.student_id = #{studentId}
+          AND latest_ha.university_id = #{universityId}
+          AND latest_ha.major_id = #{majorId}
+        LIMIT 1
+    </select>
+
+    <!-- 统计录取数据（均值、标准差） -->
+    <select id="selectAdmissionStats" resultType="java.util.Map">
+        SELECT
+            COUNT(*) AS dataCount,
+            IFNULL(AVG(admission_number), 0) AS avgScore,
+            IFNULL(NULLIF(STDDEV(admission_number), 0), 0) AS stdScore
+        FROM historical_admission
+        WHERE university_id = #{universityId}
+          AND major_id = #{majorId}
+    </select>
+
+    <!-- 专业就业前景分析基础信息 -->
+    <select id="selectMajorEmploymentBase" resultType="java.util.Map">
+        SELECT
+            m.major_id           AS major_id,
+            m.major_name         AS major_name,
+            dc.category_name     AS discipline_category,
+            m.degree_type        AS degree_type,
+            m.schooling_length   AS schooling_length,
+            IFNULL(m.line_score, 0) AS line_score,
+            (
+                SELECT COUNT(*) FROM volunteer_relation vr
+                WHERE vr.major_id = m.major_id
+            ) AS volunteer_count
+        FROM major m
+                 JOIN discipline_category dc ON m.discipline_category_id = dc.category_id
+        WHERE m.major_id = #{majorId}
+        LIMIT 1
     </select>
 
     <!-- 调用志愿冲突检测存储过程 -->
     <select id="callCheckVolunteerConflict" resultType="java.util.Map" statementType="CALLABLE">
         {CALL check_volunteer_conflict(#{studentId,mode=IN})}
-    </select>
-
-    <!-- 调用录取概率预测存储过程 -->
-    <select id="callPredictAdmissionProbability" resultType="java.util.Map" statementType="CALLABLE">
-        {CALL predict_admission_probability(#{studentId,mode=IN}, #{universityId,mode=IN}, #{majorId,mode=IN})}
     </select>
 
     <!-- 调用专业就业前景分析存储过程 -->
@@ -77,5 +203,18 @@
             code as code 
         FROM discipline_category 
         ORDER BY code ASC
+    </select>
+
+    <!-- 统计学生志愿匹配的历史录取数据数量 -->
+    <select id="countAdmissionMatches" resultType="java.lang.Integer">
+        SELECT COUNT(1)
+        FROM historical_admission ha
+        WHERE EXISTS (
+            SELECT 1
+            FROM volunteer_relation vr
+            WHERE vr.student_id = #{studentId}
+              AND vr.university_id = ha.university_id
+              AND vr.major_id = ha.major_id
+        )
     </select>
 </mapper> 
