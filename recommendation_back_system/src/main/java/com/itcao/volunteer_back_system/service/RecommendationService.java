@@ -17,7 +17,7 @@ public interface RecommendationService {
 
     /**
      * 智能志愿推荐
-     * 
+     *
      * @param studentId 学生ID
      * @return 推荐结果
      */
