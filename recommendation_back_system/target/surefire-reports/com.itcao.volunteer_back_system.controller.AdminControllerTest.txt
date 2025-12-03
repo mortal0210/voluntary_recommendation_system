@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.itcao.volunteer_back_system.controller.AdminControllerTest
+-------------------------------------------------------------------------------
+Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.608 s -- in com.itcao.volunteer_back_system.controller.AdminControllerTest

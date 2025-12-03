@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.itcao.volunteer_back_system.VolunteerBackSystemApplicationTests" time="0.696" tests="1" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.itcao.volunteer_back_system.mapper.StudentMapperTest" time="10.667" tests="0" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="17"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -63,23 +63,4 @@
     <property name="java.class.version" value="61.0"/>
     <property name="LOGGED_APPLICATION_NAME" value="[volunteer_back_system] "/>
   </properties>
-  <testcase name="contextLoads" classname="com.itcao.volunteer_back_system.VolunteerBackSystemApplicationTests" time="0.007">
-    <system-out><![CDATA[2025-12-03T15:21:59.601+08:00  INFO 33272 --- [volunteer_back_system_test] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.itcao.volunteer_back_system.VolunteerBackSystemApplicationTests]: VolunteerBackSystemApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-
-  .   ____          _            __ _ _
- /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
-( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
- \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
-  '  |____| .__|_| |_|_| |_\__, | / / / /
- =========|_|==============|___/=/_/_/_/
-
- :: Spring Boot ::                (v3.4.7)
-
-2025-12-03T15:21:59.634+08:00  INFO 33272 --- [volunteer_back_system_test] [           main] .i.v.VolunteerBackSystemApplicationTests : Starting VolunteerBackSystemApplicationTests using Java 17.0.12 with PID 33272 (started by 20831 in E:\voluntary_recommendation_system\recommendation_back_system)
-2025-12-03T15:21:59.634+08:00 DEBUG 33272 --- [volunteer_back_system_test] [           main] .i.v.VolunteerBackSystemApplicationTests : Running with Spring Boot v3.4.7, Spring v6.2.8
-2025-12-03T15:21:59.634+08:00  INFO 33272 --- [volunteer_back_system_test] [           main] .i.v.VolunteerBackSystemApplicationTests : No active profile set, falling back to 1 default profile: "default"
-Logging initialized using 'class org.apache.ibatis.logging.stdout.StdOutImpl' adapter.
-2025-12-03T15:22:00.285+08:00  INFO 33272 --- [volunteer_back_system_test] [           main] .i.v.VolunteerBackSystemApplicationTests : Started VolunteerBackSystemApplicationTests in 0.672 seconds (process running for 41.23)
-]]></system-out>
-  </testcase>
 </testsuite>
